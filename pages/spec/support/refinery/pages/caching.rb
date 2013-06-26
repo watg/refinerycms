@@ -1,3 +1,7 @@
+ActionController::Base.class_eval do
+  include ActionController::Caching::Pages
+end
+
 RSpec.configure do |config|
   config.before(:each) do
     Refinery::Pages::PageSweeper.any_instance.stub(:expire_cache!)
@@ -12,7 +16,7 @@ RSpec.configure do |config|
   end
 
   config.after(:each, :caching => true) do
-    FileUtils.rm_rf "spec/dummy/public/refinery/cache" 
+    FileUtils.rm_rf "spec/dummy/public/refinery/cache"
     ActionController::Base.perform_caching = false
     Refinery::Pages.cache_pages_full = false
   end

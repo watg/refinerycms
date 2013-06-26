@@ -18,6 +18,7 @@ gem 'database_cleaner', github: "ugisozols/database_cleaner", branch: 'rails4'
 gem 'routing-filter', github: "svenfuchs/routing-filter"
 gem 'friendly_id', github: "FriendlyId/friendly_id", branch: 'rails4'
 gem 'rails-observers'
+gem 'actionpack-page_caching'
 
 # Add support for refinerycms-acts-as-indexed
 gem 'refinerycms-acts-as-indexed', :git => 'git://github.com/refinery/refinerycms-acts-as-indexed.git'
