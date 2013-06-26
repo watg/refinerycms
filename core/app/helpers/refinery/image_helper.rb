@@ -4,18 +4,16 @@ module Refinery
     # replace all system images with a thumbnail version of them (handy for all images inside a page part)
     # for example, <%= content_fu(@page.content_for(:body), '96x96#c') %> converts all /system/images to a 96x96 cropped thumbnail
     def content_fu(content, thumbnail)
-      content.gsub(%r{<img.+?src=['"](/system/images/.+?)/.+?/>}) do |image_match|
-         begin
-           uid = Dragonfly::Job.from_path(
-                    "#{image_match.match(%r{(/system/images/.+?)/})[1]}", Dragonfly[:refinery_images]
-                 ).uid
+      content.gsub(%r{<img.+?src=['"](/system/images/.+?)/.+?/>}) do |img|
+        begin
+          sha = img.match(%r{/system/images/(.+?)/})[1]
+          job = Dragonfly::Job.deserialize sha, Dragonfly[:refinery_images]
 
-           image_fu Image.where(:image_uid => uid).first, thumbnail
-         rescue
-           # FAIL, don't care why but return what we found initially.
-           image_match
-         end
-       end
+          image_fu Image.where(:image_uid => job.uid).first, thumbnail
+        rescue Dragonfly::Serializer::BadString
+          img
+        end
+      end
     end
 
     # image_fu is a helper for inserting an image that has been uploaded into a template.
@@ -26,7 +24,8 @@ module Refinery
       if image.present?
         dimensions = (image.thumbnail_dimensions(geometry) rescue {})
 
-        image_tag(image.thumbnail(geometry).url, {
+        image_tag(image.thumbnail(:geometry => geometry,
+                                  :strip => options[:strip]).url, {
           :alt => image.respond_to?(:title) ? image.title : image.image_name,
         }.merge(dimensions).merge(options))
       end

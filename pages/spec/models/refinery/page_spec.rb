@@ -3,7 +3,6 @@ require 'spec_helper'
 
 module Refinery
   describe Page do
-
     let(:page_title) { 'RSpec is great for testing too' }
     let(:child_title) { 'The child page' }
 
@@ -16,15 +15,24 @@ module Refinery
     let(:created_child) { created_page.children.create!(:title => child_title) }
 
     def page_cannot_be_destroyed
+      page.should_receive(:puts_destroy_help)
       page.destroy.should == false
     end
 
     def turn_off_marketable_urls
-      Refinery::Pages.stub(:marketable_urls).and_return(false)
+      Pages.stub(:marketable_urls).and_return(false)
     end
 
     def turn_on_marketable_urls
-      Refinery::Pages.stub(:marketable_urls).and_return(true)
+      Pages.stub(:marketable_urls).and_return(true)
+    end
+
+    def turn_off_slug_scoping
+      Pages.stub(:scope_slug_by_parent).and_return(false)
+    end
+
+    def turn_on_slug_scoping
+      Pages.stub(:scope_slug_by_parent).and_return(true)
     end
 
     context 'cannot be deleted under certain rules' do
@@ -106,9 +114,9 @@ module Refinery
 
     context 'canonicals' do
       before do
-        ::Refinery::I18n.stub(:default_frontend_locale).and_return(:en)
-        ::Refinery::I18n.stub(:frontend_locales).and_return([Refinery::I18n.default_frontend_locale, :ru])
-        ::Refinery::I18n.stub(:current_frontend_locale).and_return(Refinery::I18n.default_frontend_locale)
+        Refinery::I18n.stub(:default_frontend_locale).and_return(:en)
+        Refinery::I18n.stub(:frontend_locales).and_return([I18n.default_frontend_locale, :ru])
+        Refinery::I18n.stub(:current_frontend_locale).and_return(I18n.default_frontend_locale)
 
         page.save
       end
@@ -118,7 +126,7 @@ module Refinery
 
       describe '#canonical' do
         let!(:default_canonical) {
-          Globalize.with_locale(::Refinery::I18n.default_frontend_locale) {
+          Globalize.with_locale(Refinery::I18n.default_frontend_locale) {
             page.canonical
           }
         }
@@ -143,7 +151,7 @@ module Refinery
 
       describe '#canonical_slug' do
         let!(:default_canonical_slug) {
-          Globalize.with_locale(::Refinery::I18n.default_frontend_locale) {
+          Globalize.with_locale(Refinery::I18n.default_frontend_locale) {
             page.canonical_slug
           }
         }
@@ -169,22 +177,43 @@ module Refinery
     context 'custom slugs' do
       let(:custom_page_slug) { 'custom-page-slug' }
       let(:custom_child_slug) { 'custom-child-slug' }
+      let(:custom_route) { '/products/my-product' }
       let(:page_with_custom_slug) {
         subject.class.new(:title => page_title, :custom_slug => custom_page_slug)
       }
       let(:child_with_custom_slug) {
         page.children.new(:title => child_title, :custom_slug => custom_child_slug)
       }
+      let(:page_with_custom_route) {
+        subject.class.new(:title => page_title, :custom_slug => custom_route)
+      }
 
       after(:each) do
-        ::Refinery::I18n.stub(:current_frontend_locale).and_return(Refinery::I18n.default_frontend_locale)
-        ::Refinery::I18n.stub(:current_locale).and_return(Refinery::I18n.default_locale)
+        Refinery::I18n.stub(:current_frontend_locale).and_return(I18n.default_frontend_locale)
+        Refinery::I18n.stub(:current_locale).and_return(I18n.default_locale)
       end
 
       it 'returns its path with custom slug' do
         page_with_custom_slug.save
         page_with_custom_slug.url[:id].should be_nil
         page_with_custom_slug.url[:path].should == [custom_page_slug]
+      end
+
+      it 'allows a custom route when slug scoping is off' do
+        turn_off_slug_scoping
+        page_with_custom_route.save
+        page_with_custom_route.url[:id].should be_nil
+        page_with_custom_route.url[:path].should == [custom_route]
+        turn_on_slug_scoping
+      end
+
+      it 'allows slashes in custom routes but slugs everything in between' do
+        turn_off_slug_scoping
+        page_needing_a_slugging = subject.class.new(:title => page_title, :custom_slug => 'products/category/sub category/my product is cool!')
+        page_needing_a_slugging.save
+        page_needing_a_slugging.url[:id].should be_nil
+        page_needing_a_slugging.url[:path].should == ['products/category/sub-category/my-product-is-cool']
+        turn_on_slug_scoping
       end
 
       it 'returns its path underneath its parent with custom urls' do
@@ -195,9 +224,41 @@ module Refinery
         child_with_custom_slug.url[:path].should == [page.url[:path].first, custom_child_slug]
       end
 
+      it 'does not return a path underneath its parent when scoping is off' do
+        turn_off_slug_scoping
+        child_with_custom_slug.save
+        page.save
+
+        child_with_custom_slug.url[:id].should be_nil
+        child_with_custom_slug.url[:path].should == [custom_child_slug]
+        turn_on_slug_scoping
+      end
+      
+      it "doesn't allow slashes in slug" do
+        page_with_slashes_in_slug = subject.class.new(:title => page_title, :custom_slug => '/products/category')
+        page_with_slashes_in_slug.save
+        page_with_slashes_in_slug.url[:path].should == ['productscategory']
+      end
+      
+      it "allow slashes in slug when slug scoping is off" do
+        turn_off_slug_scoping
+        page_with_slashes_in_slug = subject.class.new(:title => page_title, :custom_slug => 'products/category/subcategory')
+        page_with_slashes_in_slug.save
+        page_with_slashes_in_slug.url[:path].should == ['products/category/subcategory']
+        turn_on_slug_scoping
+      end
+      
+      it "strips leading and trailing slashes in slug when slug scoping is off" do
+        turn_off_slug_scoping
+        page_with_slashes_in_slug = subject.class.new(:title => page_title, :custom_slug => '/products/category/subcategory/')
+        page_with_slashes_in_slug.save
+        page_with_slashes_in_slug.url[:path].should == ['products/category/subcategory']
+        turn_on_slug_scoping
+      end
+
       it 'returns its path with custom slug when using different locale' do
-        ::Refinery::I18n.stub(:current_frontend_locale).and_return(:ru)
-        ::Refinery::I18n.stub(:current_locale).and_return(:ru)
+        Refinery::I18n.stub(:current_frontend_locale).and_return(:ru)
+        Refinery::I18n.stub(:current_locale).and_return(:ru)
         page_with_custom_slug.custom_slug = "#{custom_page_slug}-ru"
         page_with_custom_slug.save
         page_with_custom_slug.reload
@@ -207,8 +268,8 @@ module Refinery
       end
 
       it 'returns path underneath its parent with custom urls when using different locale' do
-        ::Refinery::I18n.stub(:current_frontend_locale).and_return(:ru)
-        ::Refinery::I18n.stub(:current_locale).and_return(:ru)
+        Refinery::I18n.stub(:current_frontend_locale).and_return(:ru)
+        Refinery::I18n.stub(:current_locale).and_return(:ru)
         child_with_custom_slug.custom_slug = "#{custom_child_slug}-ru"
         child_with_custom_slug.save
         child_with_custom_slug.reload
@@ -223,22 +284,11 @@ module Refinery
         end
 
         it "fails validation when a new record uses that custom_slug" do
-          new_page = Refinery::Page.new :custom_slug => custom_page_slug
+          new_page = Page.new :custom_slug => custom_page_slug
           new_page.valid?
 
           new_page.errors[:custom_slug].should_not be_empty
         end
-      end
-    end
-
-    context 'home page' do
-      it 'responds as the home page' do
-        page.link_url = '/'
-        page.home?.should == true
-      end
-
-      it 'responds as a normal page when not set to home page' do
-        page.home?.should == false
       end
     end
 
@@ -253,6 +303,20 @@ module Refinery
         page.content_for('BoDY').should == "<p>I'm the first page part for this page.</p>"
       end
 
+      it 'requires a unique title' do
+        page.save
+        page.parts.create(:title => 'body')
+        duplicate_title_part = page.parts.create(:title => 'body')
+
+        duplicate_title_part.errors[:title].should be_present
+      end
+
+      it 'only requires a unique title on the same page' do
+        part_one = Page.create(:title => 'first page').parts.create(:title => 'body')
+        part_two = Page.create(:title => 'second page').parts.create(:title => 'body')
+
+        part_two.errors[:title].should be_empty
+      end
 
       context 'when using content_for?' do
 
@@ -270,10 +334,6 @@ module Refinery
           page.content_for?(:body).should be_false
         end
 
-      end
-
-      it 'return all page part content' do
-        page.all_page_part_content.should == "<p>I'm the first page part for this page.</p> <p>Closely followed by the second page part.</p>"
       end
 
       it 'reposition correctly' do
@@ -369,12 +429,12 @@ module Refinery
 
     describe "#to_refinery_menu_item" do
       let(:page) do
-        Refinery::Page.new(
+        Page.new(
           :id => 5,
           :parent_id => 8,
           :menu_match => "^/foo$"
 
-        # Refinery::Page does not allow setting lft and rgt, so stub them.
+        # Page does not allow setting lft and rgt, so stub them.
         ).tap do |p|
           p[:lft] = 6
           p[:rgt] = 7
@@ -476,11 +536,11 @@ module Refinery
       end
 
       it "should return (root) about page when looking for '/about'" do
-        Refinery::Page.find_by_path('/about').should == created_root_about
+        Page.find_by_path('/about').should == created_root_about
       end
 
       it "should return child about page when looking for '/team/about'" do
-        Refinery::Page.find_by_path('/team/about').should == created_child
+        Page.find_by_path('/team/about').should == created_child
       end
     end
 
@@ -489,31 +549,23 @@ module Refinery
       let(:path) { "market" }
       let(:id) { market.id }
 
-      context "when marketable urls are true and path is present" do
-        before do
-          Refinery::Page.stub(:marketable_urls).and_return(true)
-        end
-
+      context "when path param is present" do
         context "when path is friendly_id" do
           it "finds page using path" do
-            Refinery::Page.find_by_path_or_id(path, "").should eq(market)
+            Page.find_by_path_or_id(path, "").should eq(market)
           end
         end
 
         context "when path is not friendly_id" do
           it "finds page using id" do
-            Refinery::Page.find_by_path_or_id(id, "").should eq(market)
+            Page.find_by_path_or_id(id, "").should eq(market)
           end
         end
       end
 
-      context "when id is present" do
-        before do
-          Refinery::Page.stub(:marketable_urls).and_return(false)
-        end
-
+      context "when id param is present" do
         it "finds page using id" do
-          Refinery::Page.find_by_path_or_id("", id).should eq(market)
+          Page.find_by_path_or_id("", id).should eq(market)
         end
       end
     end
@@ -523,6 +575,7 @@ module Refinery
         page.deletable  = true
         page.link_url   = ""
         page.menu_match = ""
+        page.stub(:puts_destroy_help).and_return('')
         page
       end
 
@@ -557,14 +610,12 @@ module Refinery
         page.link_url   = "link_url"
         page.menu_match = "menu_match"
         page.save!
-        # need to stub this in order to see message
-        Rails.env.stub(:test?).and_return(false)
       end
 
       it "shows message" do
-        msg = capture(:stdout) { page.destroy }
+        page.should_receive(:puts_destroy_help)
 
-        msg.should eq("This page is not deletable. Please use .destroy! if you really want it deleted \nunset .link_url,\nunset .menu_match,\nset .deletable to true\n")
+        page.destroy
       end
     end
   end

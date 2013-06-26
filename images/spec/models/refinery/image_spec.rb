@@ -72,16 +72,16 @@ module Refinery
       end
 
       it "becomes different when supplying geometry" do
-        created_image.url.should_not == created_image.thumbnail('200x200').url
+        created_image.url.should_not == created_image.thumbnail(:geometry => '200x200').url
       end
 
       it "has different urls for each geometry string" do
-        created_image.thumbnail('200x200').url.should_not == created_image.thumbnail('200x201').url
+        created_image.thumbnail(:geometry => '200x200').url.should_not == created_image.thumbnail(:geometry => '200x201').url
       end
 
       it "uses right geometry when given a thumbnail name" do
         name, geometry = Refinery::Images.user_image_sizes.first
-        created_image.thumbnail(name).url.should == created_image.thumbnail(geometry).url
+        created_image.thumbnail(:geometry => name).url.should == created_image.thumbnail(:geometry => geometry).url
       end
     end
 
@@ -171,6 +171,16 @@ module Refinery
 
       it '225x255>' do
         created_alternate_image.thumbnail_dimensions('225x255>').should == { :width => 225, :height => 110 }
+      end
+    end
+
+    describe '#thumbnail_dimensions returns correctly with user-defined geometries' do
+      it ':medium' do
+        created_image.thumbnail_dimensions(:medium).should == { :width => 225, :height => 169 }
+      end
+
+      it ':large' do
+        created_image.thumbnail_dimensions(:large).should == { :width => 450, :height => 338 }
       end
     end
 

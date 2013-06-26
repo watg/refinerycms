@@ -1,3 +1,5 @@
+require 'decorators'
+
 module Refinery
   module Core
     class Engine < ::Rails::Engine
@@ -7,14 +9,9 @@ module Refinery
       engine_name :refinery
 
       class << self
-        # Require/load (based on Rails app.config) all decorators from app/decorators/
-        # and from registered plugins' paths too.
-        def load_decorators
-          [Rails.root, Refinery::Plugins.registered.pathnames].flatten.map { |p|
-            Dir[p.join('app', 'decorators', '**', '*_decorator.rb')]
-          }.flatten.uniq.each do |decorator|
-            Rails.application.config.cache_classes ? require(decorator) : load(decorator)
-          end
+        # Register all decorators from app/decorators/ and registered plugins' paths.
+        def register_decorators!
+          Decorators.register! Rails.root, Refinery::Plugins.registered.pathnames
         end
 
         # Performs the Refinery inclusion process which extends the currently loaded Rails
@@ -36,7 +33,7 @@ module Refinery
       # Include the refinery controllers and helpers dynamically
       config.to_prepare &method(:refinery_inclusion!).to_proc
 
-      after_inclusion &method(:load_decorators).to_proc
+      after_inclusion &method(:register_decorators!).to_proc
 
       # Wrap errors in spans
       config.to_prepare do
@@ -54,7 +51,6 @@ module Refinery
           plugin.pathname = root
           plugin.name = 'refinery_core'
           plugin.class_name = 'RefineryEngine'
-          plugin.version = Refinery.version
           plugin.hide_from_menu = true
           plugin.always_allow_access = true
           plugin.menu_match = /refinery\/(refinery_)?core$/
@@ -65,7 +61,6 @@ module Refinery
         Refinery::Plugin.register do |plugin|
           plugin.pathname = root
           plugin.name = 'refinery_dialogs'
-          plugin.version = Refinery.version
           plugin.hide_from_menu = true
           plugin.always_allow_access = true
           plugin.menu_match = /refinery\/(refinery_)?dialogs/

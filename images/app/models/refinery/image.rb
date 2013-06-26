@@ -1,5 +1,4 @@
 require 'dragonfly'
-require 'acts_as_indexed'
 
 module Refinery
   class Image < Refinery::Core::BaseModel
@@ -16,9 +15,6 @@ module Refinery
                        :of => :image,
                        :in => ::Refinery::Images.whitelisted_mime_types,
                        :message => :incorrect_format
-
-    # Docs for acts_as_indexed http://github.com/dougal/acts_as_indexed
-    acts_as_indexed :fields => [:title]
 
     # allows Mass-Assignment
     attr_accessible :id, :image, :image_size
@@ -40,22 +36,31 @@ module Refinery
       end
     end
 
-    # Get a thumbnail job object given a geometry.
-    def thumbnail(geometry = nil)
-      if geometry.is_a?(Symbol) and Refinery::Images.user_image_sizes.keys.include?(geometry)
-        geometry = Refinery::Images.user_image_sizes[geometry]
+    # Get a thumbnail job object given a geometry and whether to strip image profiles and comments.
+    def thumbnail(options = {})
+      if options.is_a?(String) || options.is_a?(Symbol)
+        Refinery.deprecate 'Refinery::Image#thumbnail(geometry)',
+                           :when => '2.2',
+                           :replacement => 'Refinery::Image#thumbnail(:geometry => value)'
+        options = { :geometry => options }
       end
 
-      if geometry.present? && !geometry.is_a?(Symbol)
-        image.thumb(geometry)
-      else
-        image
-      end
+      options = { :geometry => :no_geometry, :strip => true }.merge(options)
+      geometry = convert_to_geometry(options[:geometry])
+      thumbnail = image
+      thumbnail = thumbnail.thumb(geometry) unless geometry.is_a?(Symbol)
+      thumbnail = thumbnail.strip if options[:strip]
+      thumbnail
     end
 
     # Intelligently works out dimensions for a thumbnail of this image based on the Dragonfly geometry string.
     def thumbnail_dimensions(geometry)
-      geometry = geometry.to_s
+      geometry = if geometry.is_a?(Symbol) && Refinery::Images.user_image_sizes.keys.include?(geometry)
+        Refinery::Images.user_image_sizes[geometry]
+      else
+        geometry.to_s
+      end
+
       width = original_width = self.image_width.to_f
       height = original_height = self.image_height.to_f
       geometry_width, geometry_height = geometry.split(%r{\#{1,2}|\+|>|!|x}im)[0..1].map(&:to_f)
@@ -98,6 +103,16 @@ module Refinery
     # my_file.jpg returns My File
     def title
       CGI::unescape(image_name.to_s).gsub(/\.\w+$/, '').titleize
+    end
+
+    private
+
+    def convert_to_geometry(geometry)
+      if geometry.is_a?(Symbol) && Refinery::Images.user_image_sizes.keys.include?(geometry)
+        Refinery::Images.user_image_sizes[geometry]
+      else
+        geometry
+      end
     end
 
   end

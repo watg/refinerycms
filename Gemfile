@@ -1,4 +1,4 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
 gemspec
 
@@ -12,11 +12,15 @@ gem 'seo_meta', github: 'parndt/seo_meta', branch: 'master'
 # See: https://github.com/svenfuchs/globalize3/pull/121
 gem 'globalize3', github: 'svenfuchs/globalize3'
 gem 'paper_trail', github: 'parndt/paper_trail', branch: 'rails4'
-gem 'devise', github: 'parndt/devise', branch: 'rails4'
 gem 'awesome_nested_set', github: 'collectiveidea/awesome_nested_set', branch: 'master'
 gem 'orm_adapter', github: 'ugisozols/orm_adapter', branch: 'rails4'
 gem 'database_cleaner', github: "ugisozols/database_cleaner", branch: 'rails4'
 gem 'routing-filter', github: "refinery/routing-filter", branch: 'rails4'
+
+# Add support for refinerycms-acts-as-indexed
+gem 'refinerycms-acts-as-indexed', :git => 'git://github.com/refinery/refinerycms-acts-as-indexed.git'
+
+gem 'quiet_assets', :group => :development
 
 # Database Configuration
 unless ENV['TRAVIS']
@@ -24,27 +28,22 @@ unless ENV['TRAVIS']
   gem 'sqlite3', platform: :ruby
 end
 
-unless ENV['TRAVIS'] && ENV['DB'] != 'mysql'
-  gem 'activerecord-jdbcmysql-adapter', platform: :jruby
-  gem 'mysql2', platform: :ruby
+if !ENV['TRAVIS'] || ENV['DB'] == 'mysql'
+  gem 'activerecord-jdbcmysql-adapter', :platform => :jruby
+  gem 'jdbc-mysql', '= 5.1.13', :platform => :jruby
+  gem 'mysql2', :platform => :ruby
 end
 
-unless ENV['TRAVIS'] && ENV['DB'] != 'postgresql'
-  gem 'activerecord-jdbcpostgresql-adapter', platform: :jruby
-  gem 'pg', platform: :ruby
+if !ENV['TRAVIS'] || ENV['DB'] == 'postgresql'
+  gem 'activerecord-jdbcpostgresql-adapter', :platform => :jruby
+  gem 'pg', :platform => :ruby
 end
 
 gem 'jruby-openssl', platform: :jruby
 
-group :development, :test do
-  gem 'refinerycms-testing', path: '.'
-end
-
 group :test do
+  gem 'refinerycms-testing', '~> 2.1.0.dev'
   gem 'generator_spec', '~> 0.9'
-  gem 'guard-rspec', '~> 0.7.0'
-  gem 'fuubar', '~> 1.0.0'
-  gem 'launchy'
 
   platforms :mswin, :mingw do
     gem 'win32console', '~> 1.3.0'
@@ -55,11 +54,11 @@ group :test do
   platforms :ruby do
     unless ENV['TRAVIS']
       require 'rbconfig'
-      if RbConfig::CONFIG['target_os'] =~ /darwin/i
+      if /darwin/i === RbConfig::CONFIG['target_os']
         gem 'rb-fsevent', '~> 0.9.0'
         gem 'ruby_gntp', '~> 0.3.4'
       end
-      if RbConfig::CONFIG['target_os'] =~ /linux/i
+      if /linux/i === RbConfig::CONFIG['target_os']
         gem 'rb-inotify', '~> 0.8.8'
         gem 'libnotify',  '~> 0.7.2'
         gem 'therubyracer', '~> 0.10.0'
@@ -70,10 +69,10 @@ group :test do
   platforms :jruby do
     unless ENV['TRAVIS']
       require 'rbconfig'
-      if RbConfig::CONFIG['target_os'] =~ /darwin/i
+      if /darwin/i === RbConfig::CONFIG['target_os']
         gem 'ruby_gntp', '~> 0.3.4'
       end
-      if RbConfig::CONFIG['target_os'] =~ /linux/i
+      if /linux/i === RbConfig::CONFIG['target_os']
         gem 'rb-inotify', '~> 0.8.8'
         gem 'libnotify',  '~> 0.7.2'
       end
@@ -84,8 +83,8 @@ end
 # Gems used only for assets and not required
 # in production environments by default.
 group :assets do
-  gem 'sass-rails', github: 'rails/sass-rails'
-  gem 'coffee-rails', github: 'rails/coffee-rails'
+  gem 'sass-rails', '4.0.0'
+  gem 'coffee-rails', '4.0.0'
   gem 'uglifier', '>= 1.0.3', require: false
 end
 
