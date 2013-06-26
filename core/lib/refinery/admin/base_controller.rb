@@ -45,7 +45,7 @@ module Refinery
       end
 
       def require_refinery_users!
-        redirect_to refinery.signup_path if just_installed? && controller_name != 'users'
+        redirect_to refinery.new_signup_path if just_installed? && controller_name != 'users'
       end
 
       def restrict_plugins
