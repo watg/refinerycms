@@ -5,13 +5,15 @@ gemspec
 # Add i18n support.
 gem 'refinerycms-i18n', '~> 2.1.0.dev', github: 'refinery/refinerycms-i18n'
 
-gem 'protected_attributes', github: 'rails/protected_attributes'
+gem 'protected_attributes'
+gem 'seo_meta', github: 'parndt/seo_meta', branch: 'master'
+
 # Fixes uniqueness constraint on translated columns.
 # See: https://github.com/svenfuchs/globalize3/pull/121
 gem 'globalize3', github: 'svenfuchs/globalize3'
 gem 'paper_trail', github: 'parndt/paper_trail', branch: 'rails4'
 gem 'devise', github: 'parndt/devise', branch: 'rails4'
-gem 'awesome_nested_set', github: 'collectiveidea/awesome_nested_set'
+gem 'awesome_nested_set', github: 'collectiveidea/awesome_nested_set', branch: 'master'
 gem 'orm_adapter', github: 'ugisozols/orm_adapter', branch: 'rails4'
 gem 'database_cleaner', github: "ugisozols/database_cleaner", branch: 'rails4'
 gem 'routing-filter', github: "refinery/routing-filter", branch: 'rails4'
@@ -39,7 +41,7 @@ group :development, :test do
 end
 
 group :test do
-  gem 'generator_spec', '>= 0.8.5', github: 'stevehodgkiss/generator_spec'
+  gem 'generator_spec', '~> 0.9'
   gem 'guard-rspec', '~> 0.7.0'
   gem 'fuubar', '~> 1.0.0'
   gem 'launchy'
@@ -98,18 +100,7 @@ gem 'jquery-rails', '~> 2.0.0'
 # gem 'fog'
 
 # Bundle edge Rails instead:
-gem 'rails', github: 'rails/rails'
-if ENV['JOURNEY']
-  gem 'journey', path: ENV['JOURNEY']
-else
-  gem 'journey', github: "rails/journey"
-end
-
-if ENV['AR_DEPRECATED_FINDERS']
-  gem 'activerecord-deprecated_finders', path: ENV['AR_DEPRECATED_FINDERS']
-else
-  gem 'activerecord-deprecated_finders', github: 'rails/activerecord-deprecated_finders'
-end
+gem 'rails', '~> 4.0.0'
 
 # gem 'rack', github: 'rack/rack'
 # gem 'arel', github: 'rails/arel'
