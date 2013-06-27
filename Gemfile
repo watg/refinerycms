@@ -6,24 +6,22 @@ gemspec
 gem 'refinerycms-i18n', '~> 2.1.0.dev', github: 'refinery/refinerycms-i18n'
 
 gem 'protected_attributes'
-gem 'seo_meta', github: 'parndt/seo_meta', branch: 'master'
+gem 'seo_meta', github: 'parndt/seo_meta'
 
 # Fixes uniqueness constraint on translated columns.
 # See: https://github.com/svenfuchs/globalize3/pull/121
 gem 'globalize3', github: 'svenfuchs/globalize3'
 gem 'paper_trail', github: 'parndt/paper_trail', branch: 'rails4'
 gem 'awesome_nested_set', github: 'collectiveidea/awesome_nested_set', branch: 'rails4'
-gem 'orm_adapter', github: 'ugisozols/orm_adapter', branch: 'rails4'
-gem 'database_cleaner', github: "ugisozols/database_cleaner", branch: 'rails4'
 gem 'routing-filter', github: "svenfuchs/routing-filter"
 gem 'friendly_id', github: "FriendlyId/friendly_id", branch: 'rails4'
 gem 'rails-observers'
 gem 'actionpack-page_caching'
 
 # Add support for refinerycms-acts-as-indexed
-gem 'refinerycms-acts-as-indexed', :git => 'git://github.com/refinery/refinerycms-acts-as-indexed.git'
+gem 'refinerycms-acts-as-indexed', github: 'refinery/refinerycms-acts-as-indexed'
 
-gem 'quiet_assets', :group => :development
+gem 'quiet_assets', group: :development
 
 # Database Configuration
 unless ENV['TRAVIS']
